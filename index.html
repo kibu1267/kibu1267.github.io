@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>きぶちのリンク集</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
   <style>
     body {
       margin: 0;
@@ -33,6 +34,7 @@
       display: flex;
       flex-direction: column;
       gap: 15px;
+      padding-top: 3px;
     }
 
     .link-item {
@@ -50,6 +52,7 @@
     .link-item:nth-child(1) { animation-delay: 0.5s; }
     .link-item:nth-child(2) { animation-delay: 0.7s; }
     .link-item:nth-child(3) { animation-delay: 0.9s; }
+    .link-item:nth-child(4) { animation-delay: 1.1s; }
 
     .link-item:hover {
       background: #222;
@@ -86,129 +89,103 @@
     font-size: 1rem;
   }
 
-  .link-item {
-    padding: 12px 16px;
-    border-radius: 10px;
-  }
-
   body {
     padding: 30px 15px;
   }
-}
-
-.link-item {
-  background: #1a1a1a;
-  padding: 15px 20px;
-  border-radius: 12px;
-  border: 1px solid #333;
-  transition: background 0.3s, transform 0.2s;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: fadeInUp 0.6s ease forwards;
-  position: relative; /* ← これ重要！ */
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* 説明ツールチップ（右端に表示） */
-.tooltip {
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%) translateX(10px);
-  background: #222;
-  color: #fff;
-  padding: 6px 10px;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  opacity: 0;
-  border-radius: 6px;
-  border: 1px solid #444;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: none;
-}
-
-/* ホバー時に表示（.link-item にホバーしたとき） */
-.link-item:hover .tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0px);
-}
-
-.mute-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #111;
-  color: #00e5ff;
-  border: none;
-  border-radius: 50%;
-  font-size: 24px;
-  width: 50px;
-  height: 50px;
-  cursor: pointer;
-  z-index: 100;
-  box-shadow: 0 0 8px #00e5ff80;
-  transition: background 0.3s ease;
-}
-
-.mute-button:hover {
-  background: #222;
-}
-
-.pulse-animation {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 80px;
-  height: 80px;
-  background: rgba(0, 229, 255, 0.2);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  animation: pulse 1.6s ease-out infinite;
-  z-index: -1;
-  pointer-events: none;
-}
-
-.mute-button.muted .pulse-animation {
-  display: none;
-}
-
-/* 波紋アニメーション */
-@keyframes pulse {
-  0% {
-    transform: translate(-50%, -50%) scale(0.8);
-    opacity: 0.6;
   }
-  100% {
-    transform: translate(-50%, -50%) scale(1.8);
+
+  .link-item {
+    background: #1a1a1a;
+    padding: 15px 15px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    transition: background 0.3s, transform 0.2s;
     opacity: 0;
+    transform: translateY(10px);
+    animation: fadeInUp 0.6s ease forwards;
+    position: relative; /* ← これ重要！ */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
-}
+
+  /* 説明ツールチップ（右端に表示） */
+  .tooltip {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%) translateX(10px);
+    background: #222;
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    opacity: 0;
+    border-radius: 6px;
+    border: 1px solid #444;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  }
+
+  /* ホバー時に表示（.link-item にホバーしたとき） */
+  .link-item:hover .tooltip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0px);
+  }
+
+  .mute-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #111;
+    color: #00e5ff;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 0 8px #00e5ff80;
+    transition: background 0.3s ease;
+  }
+
+  .mute-button:hover {
+    background: #222;
+  }
+
+  .pulse-animation {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    background: rgba(0, 229, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse 1.6s ease-out infinite;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .mute-button.muted .pulse-animation {
+    display: none;
+  }
+
+  /* 波紋アニメーション */
+  @keyframes pulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.8);
+      opacity: 0.6;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1.8);
+      opacity: 0;
+    }
+  }
 
 
   </style>
-
-<script>
-  const audio = document.getElementById('bgm');
-  const muteBtn = document.getElementById('mute-btn');
-
-  let isPlaying = false;
-
-  muteBtn.addEventListener('click', () => {
-    if (!isPlaying) {
-      audio.play();
-      isPlaying = true;
-      audio.muted = false;
-      muteBtn.classList.remove('muted');
-      muteBtn.textContent = '🔊';
-    } else {
-      audio.muted = !audio.muted;
-      muteBtn.classList.toggle('muted');
-      muteBtn.textContent = audio.muted ? '🔇' : '🔊';
-    }
-  });
-</script>
 
 </head>
 
@@ -228,16 +205,83 @@
 
   <h1>きぶちのリンク集</h1>
   <div class="link-list">
+
     <div class="link-item">
-      <a href="https://www.youtube.com/@yourchannel" target="_blank">YouTube</a>
-    </div>
-    <div class="link-item">
-  <a href="https://www.youtube.com/@yourchannel" target="_blank">
+      <a href="https://www.youtube.com/@kibuchi" target="_blank">
+        <i class="fab fa-youtube"></i> 
     YouTube
-    <span class="tooltip"><i class="fab fa-youtube"></i> 動画投稿してます！</span>
-  </a>
-</div>
-    <!-- ここにリンクを追加していってOK！ -->
+        <span class="tooltip">
+    動画投稿してます！
+        </span>
+      </a>
+    </div>
+
+    <div class="link-item">
+      <a href="https://x.com/kibu1267" target="_blank">
+        <i class="fab fa-x-twitter"></i>
+    X(Twitter)
+        <span class="tooltip">
+    つぶやいてます！
+        </span>
+      </a>
+    </div>
+
+    <div class="link-item">
+      <a href="https://www.tiktok.com/@kibu1267" target="_blank">
+        <i class="fab fa-tiktok"></i>
+    Tiktok
+        <span class="tooltip">
+    ショート動画の宝庫！
+        </span>
+      </a>
+    </div>
+
+    <div class="link-item">
+      <a href="https://discord.com/invite/AZ4FkfkmcM" target="_blank">
+        <i class="fab fa-discord"></i>
+    Discord
+        <span class="tooltip">
+    交流の場！
+        </span>
+      </a>
+    </div>
+
+    <div class="link-item">
+      <a href="https://www.instagram.com/kibu1267/" target="_blank">
+        <i class="fab fa-instagram"></i>
+    Instagram
+        <span class="tooltip">
+    深夜に飯テロします！
+        </span>
+      </a>
+    </div>    
+
+    <!-- ここにリンクを追加！ -->
+
+
   </div>
+
+    <!--Java Script-->
+  <script>
+    const audio = document.getElementById('bgm');
+    const muteBtn = document.getElementById('mute-btn');
+  
+    let isPlaying = false;
+  
+    muteBtn.addEventListener('click', () => {
+      if (!isPlaying) {
+        audio.play();
+        isPlaying = true;
+        audio.muted = false;
+        muteBtn.classList.remove('muted');
+        muteBtn.textContent = '🔊';
+      } else {
+        audio.muted = !audio.muted;
+        muteBtn.classList.toggle('muted');
+        muteBtn.textContent = audio.muted ? '🔇' : '🔊';
+      }
+    });
+  </script>
+
 </body>
 </html>
