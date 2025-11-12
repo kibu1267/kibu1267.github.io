@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>人狼 - GitHub Pages + Firebase プロトタイプ</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDKs (必要なものだけ) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+  body { font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; margin: 0; padding: 16px; background: #f7f7fb; color: #222; }
+header { margin-bottom: 12px; }
+.hidden { display: none; }
+#root { max-width: 900px; margin: 0 auto; }
+button { padding: 8px 12px; margin: 6px; }
+#playersList { background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin: 8px 0; }
+#log { background: #111; color: #fff; padding: 8px; border-radius: 6px; margin-top:8px; max-height:200px; overflow:auto; font-size:14px;}
+#actions { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <header>
+      <h1>人狼（ブラウザ版・プロトタイプ）</h1>
+    </header>
+
+    <main>
+      <section id="lobby">
+        <div>
+          <label>プレイヤー名: <input id="playerName" placeholder="例: たろう"></label>
+        </div>
+        <div>
+          <button id="createRoomBtn">部屋を作る</button>
+          <input id="roomIdInput" placeholder="部屋IDを入力して参加">
+          <button id="joinRoomBtn">参加</button>
+        </div>
+        <div id="roomsList"></div>
+      </section>
+
+      <section id="game" class="hidden">
+        <div id="roomInfo"></div>
+        <div id="playersList"></div>
+        <div id="phaseInfo"></div>
+        <div id="actions"></div>
+        <div id="log"></div>
+        <button id="leaveBtn">退室</button>
+      </section>
+
+    </main>
+
+    <footer>
+      <small>このプロトタイプは Firebase Realtime Database を使用します。</small>
+    </footer>
+  </div>
+
+  <script src="app.js">
+// app.js - シンプルなルーム/プレイヤー管理 + 夜昼フェーズの最小ロジック
+// Firebase Realtime Database (compat) を使います。
+
+// ----- Firebase 設定（ここをあなたのプロジェクトに置換） -----
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID"
+};
+// ---------------------------------------------------------------
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const $ = (id) => document.getElementById(id);
+
+let state = {
+  myName: null,
+  roomId: null,
+  playerId: null,
+  role: null,
+};
+
+// Helpers
+function uuid(len = 8) {
+  return Math.random().toString(36).slice(2, 2+len);
+}
+
+function log(msg) {
+  const el = document.createElement('div');
+  el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  $('log').prepend(el);
+}
+
+// Lobby actions
+$('createRoomBtn').addEventListener('click', async () => {
+  const name = $('playerName').value.trim() || 'Player'+Math.floor(Math.random()*1000);
+  const roomId = uuid(6);
+  state.myName = name;
+  state.playerId = uuid(6);
+  state.roomId = roomId;
+
+  const roomRef = db.ref(`rooms/${roomId}`);
+  // initialize room
+  await roomRef.set({
+    createdAt: Date.now(),
+    phase: 'waiting',
+    players: {
+      [state.playerId]: { name, alive: true, role: null }
+    },
+    host: state.playerId
+  });
+  joinRoomUI();
+  watchRoom();
+  log(`部屋を作成しました: ${roomId}`);
+});
+
+$('joinRoomBtn').addEventListener('click', async () => {
+  const roomId = $('roomIdInput').value.trim();
+  if (!roomId) { alert('部屋IDを入力してください'); return; }
+  const name = $('playerName').value.trim() || 'Player'+Math.floor(Math.random()*1000);
+  state.myName = name;
+  state.playerId = uuid(6);
+  state.roomId = roomId;
+  const roomRef = db.ref(`rooms/${roomId}/players/${state.playerId}`);
+  await roomRef.set({ name, alive: true, role: null });
+  joinRoomUI();
+  watchRoom();
+  log(`部屋 ${roomId} に参加しました`);
+});
+
+$('leaveBtn').addEventListener('click', async () => {
+  if (!state.roomId || !state.playerId) return location.reload();
+  await db.ref(`rooms/${state.roomId}/players/${state.playerId}`).remove();
+  location.reload();
+});
+
+// UI transitions
+function joinRoomUI() {
+  $('lobby').classList.add('hidden');
+  $('game').classList.remove('hidden');
+  $('roomInfo').textContent = `Room: ${state.roomId} | You: ${state.myName}`;
+}
+
+// Watch room updates
+let roomListener = null;
+function watchRoom() {
+  const roomRef = db.ref(`rooms/${state.roomId}`);
+  if (roomListener) roomRef.off('value', roomListener);
+  roomListener = roomRef.on('value', (snap) => {
+    const room = snap.val();
+    if (!room) { alert('部屋が閉じられました'); location.reload(); return; }
+    renderRoom(room);
+  });
+}
+
+function renderRoom(room) {
+  // players
+  const players = room.players || {};
+  const playersEl = $('playersList');
+  playersEl.innerHTML = '<strong>プレイヤー:</strong><ul></ul>';
+  const ul = playersEl.querySelector('ul');
+  for (const [pid, p] of Object.entries(players)) {
+    const li = document.createElement('li');
+    li.textContent = `${p.name} ${!p.alive ? '(死)' : ''} ${ (pid===room.host) ? '[Host]' : '' }`;
+    ul.appendChild(li);
+  }
+
+  $('phaseInfo').textContent = `Phase: ${room.phase}`;
+
+  // Host controls: start game
+  const actions = $('actions');
+  actions.innerHTML = '';
+  if (room.host === state.playerId && room.phase === 'waiting') {
+    const startBtn = document.createElement('button');
+    startBtn.textContent = 'ゲーム開始 (簡易)'
+    startBtn.onclick = () => startGame(room);
+    actions.appendChild(startBtn);
+  }
+
+  // Show simple action depending on phase
+  if (room.phase === 'night') {
+    // allow voting for wolves if role is wolf, or allow single action for seer/doctor
+    const me = players[state.playerId];
+    if (!me) return;
+    if (!me.alive) { actions.innerHTML = 'あなたは死亡しています。'; return; }
+    const role = me.role;
+    if (!role) { actions.innerHTML = '役職が配られていません。'; return; }
+    if (role === 'Werewolf') {
+      actions.innerHTML = '<div>人狼の襲撃対象を選んでください：</div>';
+      for (const [pid, p] of Object.entries(players)) {
+        if (p.role === 'Werewolf' || !p.alive) continue;
+        const b = document.createElement('button');
+        b.textContent = p.name;
+        b.onclick = () => castNightAction('kill', pid);
+        actions.appendChild(b);
+      }
+    } else if (role === 'Doctor') {
+      actions.innerHTML = '<div>医者: 守る人を選択してください：</div>';
+      for (const [pid, p] of Object.entries(players)) {
+        if (!p.alive) continue;
+        const b = document.createElement('button');
+        b.textContent = p.name;
+        b.onclick = () => castNightAction('protect', pid);
+        actions.appendChild(b);
+      }
+    } else if (role === 'Seer') {
+      actions.innerHTML = '<div>占い師: 占う人を選択：</div>';
+      for (const [pid, p] of Object.entries(players)) {
+        if (pid===state.playerId || !p.alive) continue;
+        const b = document.createElement('button');
+        b.textContent = p.name;
+        b.onclick = () => castNightAction('inspect', pid);
+        actions.appendChild(b);
+      }
+    } else {
+      actions.textContent = '夜は待機してください...';
+    }
+  }
+
+  // logs
+  const logs = room.log || [];
+  const logEl = $('log');
+  logEl.innerHTML = '';
+  (logs.slice().reverse()).forEach(l => {
+    const d = document.createElement('div');
+    d.textContent = l;
+    logEl.appendChild(d);
+  });
+}
+
+// Start game (host)
+async function startGame(room) {
+  const players = room.players || {};
+  const ids = Object.keys(players);
+  if (ids.length < 4) { alert('最低4人必要です'); return; }
+  // assign roles: simple distribution: 1-2 werewolves, 1 seer, 1 doctor, rest villagers
+  const n = ids.length;
+  const nW = n >= 9 ? 3 : (n >= 6 ? 2 : 1);
+  let roles = [];
+  for (let i=0;i<nW;i++) roles.push('Werewolf');
+  roles.push('Seer'); roles.push('Doctor');
+  while (roles.length < n) roles.push('Villager');
+  // shuffle
+  for (let i = roles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [roles[i], roles[j]] = [roles[j], roles[i]];
+  }
+  // write roles and set phase=night
+  const updates = { phase: 'night', log: firebase.database.ServerValue.arrayUnion(`ゲーム開始 — 夜フェーズ`) };
+  let i = 0;
+  for (const pid of ids) {
+    updates[`players/${pid}/role`] = roles[i++];
+    updates[`players/${pid}/alive`] = true;
+  }
+  await db.ref(`rooms/${state.roomId}`).update(updates);
+  log('ゲームを開始しました（役職配布済）');
+}
+
+// Cast night action (simple: write to room/nightActions)
+async function castNightAction(actionType, targetPid) {
+  const payload = { actor: state.playerId, action: actionType, target: targetPid, ts: Date.now() };
+  await db.ref(`rooms/${state.roomId}/nightActions/${state.playerId}`).set(payload);
+  log(`夜の行動を送信: ${actionType} -> ${targetPid}`);
+  // Host or a server process should resolve actions; here we do naive resolution if all alive players have submitted.
+  attemptResolveNight();
+}
+
+// Naive night resolver: if all alive players have submitted actions or after a timeout, resolve
+let resolving = false;
+async function attemptResolveNight() {
+  if (resolving) return;
+  resolving = true;
+  try {
+    const roomSnap = await db.ref(`rooms/${state.roomId}`).once('value');
+    const room = roomSnap.val();
+    if (!room) return;
+    const players = room.players || {};
+    const aliveIds = Object.entries(players).filter(([pid,p])=>p.alive).map(([pid,p])=>pid);
+    const actions = room.nightActions || {};
+    const submitted = Object.keys(actions);
+    // resolve if (1) all alive players with active night roles submitted OR (2) majority decisions available
+    // For prototype, resolve when at least one Werewolf act present and doctor/seer optional, or after majority votes by wolves.
+    // Simple rule: if there is at least one 'kill' submitted, pick the most-targeted pid as victim.
+    const kills = Object.values(actions).filter(a=>a.action==='kill');
+    if (kills.length === 0 && Object.keys(actions).length < 1) { resolving=false; return; }
+    // find most targeted
+    const counts = {};
+    for (const k of kills) {
+      counts[k.target] = (counts[k.target]||0) + 1;
+    }
+    let victimPid = null;
+    if (Object.keys(counts).length>0) {
+      victimPid = Object.keys(counts).reduce((a,b)=>counts[a]>=counts[b]?a:b);
+    }
+    // check protection
+    const protects = Object.values(actions).filter(a=>a.action==='protect').map(a=>a.target);
+    const inspects = Object.values(actions).filter(a=>a.action==='inspect');
+    const logs = [];
+    if (inspects.length>0) {
+      for (const ins of inspects) {
+        const role = (room.players && room.players[ins.target] && room.players[ins.target].role) || 'Unknown';
+        if (ins.actor === state.playerId) {
+          alert(`あなたの占い結果: ${room.players[ins.target].name} → ${role}`);
+        }
+        logs.push(`${room.players[ins.actor].name} が ${room.players[ins.target].name} を占った (結果: ${role})`);
+      }
+    }
+    if (victimPid) {
+      if (protects.includes(victimPid)) {
+        logs.push(`${room.players[victimPid].name} は医者に守られて助かった。`);
+      } else {
+        // kill victim
+        await db.ref(`rooms/${state.roomId}/players/${victimPid}/alive`).set(false);
+        logs.push(`${room.players[victimPid].name} が夜に倒れた。`);
+      }
+    } else {
+      logs.push(`今夜の犠牲者はいなかった。`);
+    }
+    // clear nightActions and advance to day
+    await db.ref(`rooms/${state.roomId}`).update({ phase: 'day', nightActions: null });
+    const logPath = `rooms/${state.roomId}/log`;
+    for (const ln of logs) {
+      await db.ref(logPath).push(ln);
+    }
+  } finally {
+    resolving=false;
+  }
+}
+
+// simple utility: listen for phase changes and if day -> allow lynch votes (not fully implemented in this prototype)
+db.ref().on('value', ()=>{}); // keep connection alive
+
+// NOTE: This is a minimal, illustrative prototype. Production requires: auth, DB rules, robust phase control, tie-breaking, rejoin handling, disconnects, UI improvements.
+
+</script>
+</body>
+</html>
